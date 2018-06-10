@@ -2,45 +2,36 @@ package main
 
 import (
 	. "github.com/wspl/jscoreWorker"
-	"fmt"
 )
 
 func main() {
 	recvCount := 0
-	worker := New(func(msg []byte) []byte {
-		println(msg)
+	worker1 := New(func(msg []byte) []byte {
 		if len(msg) != 5 {
-			fmt.Println("bad msg", msg)
+			panic("bad message")
+		}
+		recvCount++
+		return nil
+	})
+	worker2 := New(func(msg []byte) []byte {
+		if len(msg) != 3 {
+			panic("bad message")
 		}
 		recvCount++
 		return nil
 	})
 
-	err := worker.Load("codeWithRecv.js", `
-		JSCoreWorker.recv(function(msg) {
-			JSCoreWorker.print("TestBasic recv byteLength", msg.byteLength);
-			if (msg.byteLength !== 3) {
-				throw Error("bad message");
-			}
-		});
-	`)
+	err := worker1.Load("1.js", `JSCoreWorker.send(new ArrayBuffer(5))`)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
-	err = worker.SendBytes([]byte("hii"))
+
+	err = worker2.Load("2.js", `JSCoreWorker.send(new ArrayBuffer(3))`)
 	if err != nil {
-		fmt.Println(err)
-	}
-	codeWithSend := `
-		JSCoreWorker.send(new ArrayBuffer(5));
-		JSCoreWorker.send(new ArrayBuffer(5));
-	`
-	err = worker.Load("codeWithSend.js", codeWithSend)
-	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 
 	if recvCount != 2 {
-		fmt.Println("bad recvCount", recvCount)
+		panic("bad recvCount")
 	}
 }

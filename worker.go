@@ -49,15 +49,18 @@ func New(cb ReceiveMessageCallback) *Worker {
 
 	script := `
 const JSCoreWorker = {
-	send (buf) { rawWorker.send(` + strconv.Itoa(worker.id) + `, buf) },
-	recv (cb) { rawWorker.recv(` + strconv.Itoa(worker.id) + `, cb) },
-	print (...any) { rawWorker.print(` + strconv.Itoa(worker.id) + `, ...any) }
+	send (buf) {
+		const ret = rawWorker.send(` + strconv.Itoa(worker.id) + `, buf)
+		return ret ? ret.buffer : ret
+	},
+	recv (cb) { return rawWorker.recv(` + strconv.Itoa(worker.id) + `, cb) },
+	print (...any) { return rawWorker.print(` + strconv.Itoa(worker.id) + `, ...any) }
 }
 	`
 	worker.ctx.EvaluateScript(script, "__jscoreWorker.js")
 
-	GoRecv(worker.ctx.Convert(), func(buf []byte) {
-		worker.cb(buf)
+	GoRecv(worker.ctx.Convert(), func(buf []byte) []byte {
+		return worker.cb(buf)
 	}, worker.id)
 
 	return worker
@@ -68,13 +71,12 @@ func (w *Worker) Dispose() {
 }
 
 func (w *Worker) Load(scriptName string, code string) error {
-	w.ctx.EvaluateScript(code, scriptName)
-	return nil
+	_, err := w.ctx.EvaluateScript(code, scriptName)
+	return err
 }
 
 func (w *Worker) SendBytes(msg []byte) error {
-	GoSend(w.ctx.Convert(), msg, w.id)
-	return nil
+	return GoSend(w.ctx.Convert(), msg, w.id)
 }
 
 func (w *Worker) TerminateExecution() {

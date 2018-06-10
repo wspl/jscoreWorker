@@ -28,7 +28,7 @@ func TestPrint(t *testing.T) {
 		t.Fatal("shouldn't recieve Message")
 		return nil
 	})
-	err := worker.Load("code.js", `V8Worker2.print("ready");`)
+	err := worker.Load("code.js", `JSCoreWorker.print("ready");`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestSyntaxError(t *testing.T) {
 		return nil
 	})
 
-	code := `V8Worker2.print(hello world");`
+	code := `JSCoreWorker.print(hello world");`
 	err := worker.Load("codeWithSyntaxError.js", code)
 	errorContains(t, err, "codeWithSyntaxError.js")
 	errorContains(t, err, "hello")
@@ -58,8 +58,8 @@ func TestSendRecv(t *testing.T) {
 	})
 
 	err := worker.Load("codeWithRecv.js", `
-		V8Worker2.recv(function(msg) {
-			V8Worker2.print("TestBasic recv byteLength", msg.byteLength);
+		JSCoreWorker.recv(function(msg) {
+			JSCoreWorker.print("TestBasic recv byteLength", msg.byteLength);
 			if (msg.byteLength !== 3) {
 				throw Error("bad message");
 			}
@@ -73,8 +73,8 @@ func TestSendRecv(t *testing.T) {
 		t.Fatal(err)
 	}
 	codeWithSend := `
-		V8Worker2.send(new ArrayBuffer(5));
-		V8Worker2.send(new ArrayBuffer(5));
+		JSCoreWorker.send(new ArrayBuffer(5));
+		JSCoreWorker.send(new ArrayBuffer(5));
 	`
 	err = worker.Load("codeWithSend.js", codeWithSend)
 	if err != nil {
@@ -96,7 +96,7 @@ func TestSendWithReturnArrayBuffer(t *testing.T) {
 		return []byte{1, 2, 3}
 	})
 	err := worker.Load("TestSendWithReturnArrayBuffer.js", `
-		var ret = V8Worker2.send(new ArrayBuffer(123));
+		var ret = JSCoreWorker.send(new ArrayBuffer(123));
 		if (!(ret instanceof ArrayBuffer)) throw Error("bad");
 		if (ret.byteLength !== 3) throw Error("bad");
 		ret = new Uint8Array(ret);
@@ -126,7 +126,7 @@ func TestThrowInRecvCallback(t *testing.T) {
 		return nil
 	})
 	err := worker.Load("TestThrowInRecvCallback.js", `
-		V8Worker2.recv(function(msg) {
+		JSCoreWorker.recv(function(msg) {
 			throw Error("bad");
 		});
 	`)
@@ -144,7 +144,7 @@ func TestPrintUint8Array(t *testing.T) {
 	})
 	err := worker.Load("buffer.js", `
 		var uint8 = new Uint8Array(16);
-		V8Worker2.print(uint8);
+		JSCoreWorker.print(uint8);
 	`)
 	if err != nil {
 		t.Fatal(err)
@@ -168,12 +168,12 @@ func TestMultipleWorkers(t *testing.T) {
 		return nil
 	})
 
-	err := worker1.Load("1.js", `V8Worker2.send(new ArrayBuffer(5))`)
+	err := worker1.Load("1.js", `JSCoreWorker.send(new ArrayBuffer(5))`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = worker2.Load("2.js", `V8Worker2.send(new ArrayBuffer(3))`)
+	err = worker2.Load("2.js", `JSCoreWorker.send(new ArrayBuffer(3))`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +189,7 @@ func TestRequestFromJS(t *testing.T) {
 		captured = msg
 		return nil
 	})
-	code := ` V8Worker2.send(new ArrayBuffer(4)); `
+	code := ` JSCoreWorker.send(new ArrayBuffer(4)); `
 	err := worker.Load("code.js", code)
 	if err != nil {
 		t.Fatal(err)

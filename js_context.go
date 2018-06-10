@@ -33,7 +33,7 @@ func (ctx *JSContext) GetGlobal() *JSObject {
 	return NewJSObjectFromRef(ctx.Convert(), C.JSContextGetGlobalObject(ctx.ref))
 }
 
-func (ctx *JSContext) EvaluateScript(script string, sourceUrl string) *JSValue {
+func (ctx *JSContext) EvaluateScript(script string, sourceUrl string) (*JSValue, error) {
 	jsErr := NewJSError(ctx.Convert())
 	ret := C.JSEvaluateScript(
 		ctx.ref,
@@ -43,5 +43,9 @@ func (ctx *JSContext) EvaluateScript(script string, sourceUrl string) *JSValue {
 		C.int(0),
 		&jsErr.ref)
 
-	return NewJSValueFromRef(ctx.Convert(), ret)
+	if jsErr.ref != nil {
+		return nil, jsErr.Error(script, sourceUrl)
+	}
+
+	return NewJSValueFromRef(ctx.Convert(), ret), nil
 }
