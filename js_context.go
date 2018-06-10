@@ -8,6 +8,7 @@ package jscoreWorker
 import "C"
 
 type JSContext struct {
+	group C.JSContextGroupRef
 	ref C.JSGlobalContextRef
 }
 
@@ -16,6 +17,7 @@ func NewJSContext() *JSContext {
 	ctxGroup := C.JSContextGroupCreate()
 	ctxRef := C.JSGlobalContextCreateInGroup(ctxGroup, nil)
 	ctx.ref = ctxRef
+	ctx.group = ctxGroup
 	return ctx
 }
 

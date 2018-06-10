@@ -6,6 +6,7 @@ package jscoreWorker
 #include <stdlib.h>
 #include <JavaScriptCore/JSBase.h>
 #include <JavaScriptCore/JSContextRef.h>
+//#include <JavaScriptCore/JSContextRefPrivate.h>
 #include "bridge.h"
 typedef void (*closure)();
 */
@@ -80,5 +81,6 @@ func (w *Worker) SendBytes(msg []byte) error {
 }
 
 func (w *Worker) TerminateExecution() {
-
+	// Cannot work
+	// C.JSContextGroupSetExecutionTimeLimit(w.ctx.group, 0, nil, nil)
 }
