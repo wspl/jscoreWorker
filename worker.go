@@ -49,9 +49,9 @@ func New(cb ReceiveMessageCallback) *Worker {
 
 	script := `
 const JSCoreWorker = {
-	send (buf) { rawWorker.send(buf, ` + strconv.Itoa(worker.id) + `) },
-	recv (cb) { rawWorker.recv(cb, ` + strconv.Itoa(worker.id) + `) },
-	print (any) { rawWorker.print(any, ` + strconv.Itoa(worker.id) + `) }
+	send (buf) { rawWorker.send(` + strconv.Itoa(worker.id) + `, buf) },
+	recv (cb) { rawWorker.recv(` + strconv.Itoa(worker.id) + `, cb) },
+	print (...any) { rawWorker.print(` + strconv.Itoa(worker.id) + `, ...any) }
 }
 	`
 	worker.ctx.EvaluateScript(script, "__jscoreWorker.js")

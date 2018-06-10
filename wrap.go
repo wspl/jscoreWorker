@@ -8,34 +8,48 @@ package jscoreWorker
 typedef void (*closure)();
 */
 import "C"
+import (
+	"reflect"
+	"unsafe"
+	"strings"
+)
 
 //export jsSend_go
-func jsSend_go(ctx C.JSContextRef, value C.JSValueRef, channel C.int) C.JSValueRef {
+func jsSend_go(ctx C.JSContextRef, channel C.int, value C.JSValueRef) C.JSValueRef {
 	//println(channel)
 
 	buf := NewJSUint8ArrayFromRef(ctx, NewJSValueFromRef(ctx, value).Object().ref).Array()
-	for _, listener := range goListenersMap[int(channel)] {
-		listener(buf)
+	if goListenersMap[int(channel)] != nil {
+		goListenersMap[int(channel)](buf) // go call
 	}
 	return NewJSUndefinedFromCtxRef(ctx).ref
 }
 //export jsRecv_go
-func jsRecv_go(ctx C.JSContextRef, listener C.JSObjectRef, channel C.int) C.JSValueRef {
+func jsRecv_go(ctx C.JSContextRef, channel C.int, listener C.JSObjectRef) C.JSValueRef {
 	jsListenersMap[int(channel)] = append(jsListenersMap[int(channel)], listener)
 	return NewJSUndefinedFromCtxRef(ctx).ref
 }
 //export jsPrint_go
-func jsPrint_go(ctx C.JSContextRef, any C.JSObjectRef, channel C.int) C.JSValueRef {
-	println(NewJSObjectFromRef(ctx, any).Value().String())
+func jsPrint_go(ctx C.JSContextRef, channel C.int, anyRef *C.JSObjectRef, anyCount int) C.JSValueRef {
+	var anyList []C.JSObjectRef
+	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&anyList))
+	sliceHeader.Cap = anyCount
+	sliceHeader.Len = anyCount
+	sliceHeader.Data = uintptr(unsafe.Pointer(anyRef))
+	strList := make([]string, anyCount)
+	for _, any := range anyList {
+		strList = append(strList, NewJSObjectFromRef(ctx, any).Value().String())
+	}
+	println(strings.Join(strList, " "))
 	return NewJSUndefinedFromCtxRef(ctx).ref
 }
 
 var jsListenersMap map[int][]C.JSObjectRef
-var goListenersMap map[int][]func(buf []byte)
+var goListenersMap map[int]func(buf []byte)
 
 func init() {
 	jsListenersMap = make(map[int][]C.JSObjectRef)
-	goListenersMap = make(map[int][]func(buf []byte))
+	goListenersMap = make(map[int]func(buf []byte))
 }
 
 func GoSend(ctx C.JSContextRef, buf []byte, channel int) {
@@ -57,35 +71,5 @@ func GoSend(ctx C.JSContextRef, buf []byte, channel int) {
 }
 
 func GoRecv(ctx C.JSContextRef, listener func(buf []byte), channel int) {
-	goListenersMap[channel] = append(goListenersMap[channel], listener)
+	goListenersMap[channel] = listener
 }
-//
-//func JSCore() {
-//	ctx := NewJSContext()
-//	global := ctx.GetGlobal()
-//
-//	rawSendFn := C.JSObjectMakeFunctionWithCallback(ctx.ref, NewJSString("send").ref, C.closure(C.jsSend))
-//	rawRecvFn := C.JSObjectMakeFunctionWithCallback(ctx.ref, NewJSString("recv").ref, C.closure(C.jsRecv))
-//
-//	rawWorker := NewJSObject(ctx.Convert())
-//	rawWorker.SetProperty("send", NewJSValueFromRef(ctx.Convert(), C.JSValueRef(rawSendFn)))
-//	rawWorker.SetProperty("recv", NewJSValueFromRef(ctx.Convert(), C.JSValueRef(rawRecvFn)))
-//	global.SetProperty("rawWorker", rawWorker.Value())
-//
-//	ctx.EvaluateScript(`
-//const JSCoreWorker = {
-//	send (buf) { rawWorker.send(buf, 1) },
-//	recv (cb) { rawWorker.recv(cb, 1) }
-//}
-//	`, "__jscoreWorker.js")
-//
-//	GoRecv(ctx.Convert(), func(buf []byte) {
-//		fmt.Println(buf)
-//	}, 1)
-//
-//	ctx.EvaluateScript(`
-//	JSCoreWorker.recv((buf) => JSCoreWorker.send(buf));
-//`, "f.js").String()
-//
-//	GoSend(ctx.Convert(), []byte{1,2,3,4,5}, 1)
-//}
